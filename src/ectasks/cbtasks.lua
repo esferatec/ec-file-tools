@@ -7,6 +7,8 @@ local ditranslations = require("resource.ditranslations")
 local liapplication  = require("resource.liapplication")
 local dbtasks        = require("resource.dbtasks")
 
+
+
 --#region db initialization -- OK OK
 
 local db             = dbtasks.Database(":memory:")
@@ -560,7 +562,8 @@ function win:onShow()
   win.MM_SHOW.children.MenuShowAllTasks.checked = true
   win.WM_ENTRY.children.LinkFile.text = win.LM:translate("FileUnknown")
   win.WM_DATA.children.ButtonFilter.text = "(   )"
-
+ 
+  win:updatelist()
   win:updatewidgets()
   win:updatetitle()
   win:updatestatus()
@@ -595,5 +598,16 @@ function win:onClose()
 end
 
 --#endregion
+
+if arg[1] ~= nil then
+  db        = dbtasks.Database(arg[1])
+  db.sort   = dbtasks.SORT.SequenceDESC
+  db.show   = dbtasks.SHOW.AllTasks
+  db.filter = nil
+  db.page   = 0
+  db.pages  = 0
+  db.count  = 0
+end
+
 
 ui.run(win):wait()
