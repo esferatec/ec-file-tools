@@ -63,6 +63,8 @@ ditranslations.english = {
   ["subject DESC"] = "Subject DESC",
   ["SubjectRequired"] = "Please enter a subject!",
   ["StatusPage"] = "Page ",
+  ["StatusNoFilter"] = "No Filter",
+  ["StatusFilter"] = "Filter "
 }
 
 ditranslations.German_Germany = "German_Germany"
@@ -128,6 +130,8 @@ ditranslations.german = {
   ["subject DESC"] = "Betreff DESC",
   ["SubjectRequired"] = "Bitte geben Sie einen Betreff ein!",
   ["StatusPage"] = "Seite ",
+  ["StatusNoFilter"] = "Kein Filter",
+  ["StatusFilter"] = "Filter "
 }
 
 return ditranslations

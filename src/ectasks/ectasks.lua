@@ -43,6 +43,8 @@ if not settingsFile.exists then
   local defaultSettings = {
     MenuAppEnglish = true,
     MenuAppGerman = false,
+    MenuSortSequenceASC = true,
+    MenuShowAllTasks = true
   }
 
   local success, message = pcall(json.save, settingsFile, defaultSettings)

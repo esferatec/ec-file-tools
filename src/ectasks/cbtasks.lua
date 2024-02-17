@@ -1,17 +1,16 @@
 require("common.extension")
+
 local ui             = require("ui")
 local uidialogs      = require("module.uidialogs")
 local json           = require("json")
 
+local dbtasks        = require("resource.dbtasks")
 local ditranslations = require("resource.ditranslations")
 local liapplication  = require("resource.liapplication")
-local dbtasks        = require("resource.dbtasks")
 
+--#region db initialization
 
-
---#region db initialization -- OK OK
-
-local db             = dbtasks.Database(":memory:")
+local db             = (arg[1] == nil) and dbtasks.Database(":memory:") or dbtasks.Database(arg[1])
 db.sort              = dbtasks.SORT.SequenceDESC
 db.show              = dbtasks.SHOW.AllTasks
 db.filter            = nil
@@ -21,14 +20,14 @@ db.count             = 0
 
 --#endregion
 
---#region win initialization -- OK OK
+--#region win initialization
 
 local win            = require("uitasks")
 win.title            = liapplication.NAME
 
 --#endregion
 
---#region window methods -- OK OK
+--#region window methods
 
 function win:updatetitle()
   self.title = liapplication.NAME .. " - " .. (db.file ~= ":memory:" and db.file.name or db.file)
@@ -36,15 +35,18 @@ end
 
 function win:updatestatus()
   local statusText = string.rep(" ", 3)
-
-  statusText = statusText .. self.LM:translate("StatusPage") .. (db.page + 1) .. " / " .. db.pages
+  statusText = statusText .. self.LM:translate("StatusPage")
+  statusText = statusText .. (db.page + 1) .. " / " .. db.pages
   statusText = statusText .. string.rep(" ", 6)
   statusText = statusText .. self.LM:translate(db.sort)
   statusText = statusText .. string.rep(" ", 6)
   statusText = statusText .. self.LM:translate(db.show)
   statusText = statusText .. string.rep(" ", 6)
-  statusText = statusText .. (isnil(db.filter) and "" or db.filter)
-
+  if db.filter then
+    statusText = statusText .. self.LM:translate("StatusFilter") .. db.filter
+  else
+    statusText = statusText .. self.LM:translate("StatusNoFilter")
+  end
   self:status(statusText)
 end
 
@@ -80,11 +82,15 @@ function win:updatewidgets()
     win.WM_DATA:enable()
     win.WM_NAVIGATION:enable()
   end
+
+  if win.WM_DATA.children.ButtonFilter.text == "( X )" then
+    win.WM_DATA.children.ButtonFilter.enabled = true
+  end
 end
 
 --#endregion
 
---#region button events - OK OK
+--#region button events
 
 function win.WM_ENTRY.children.ButtonFile:onClick()
   local currentFile = ui.opendialog("", false, win.LM:translate("FilesAll"))
@@ -196,7 +202,7 @@ end
 
 --#endregion
 
---#region menu events -- OK OK
+--#region menu events
 
 function win.MM_APP.children.MenuAppEnglish:onClick()
   win.LM.dictionary = ditranslations.english
@@ -243,7 +249,7 @@ function win.MM_APP.children.MenuAppExit:onClick()
 end
 
 function win.MM_FILE.children.MenuFileCreate:onClick()
-  db = dbtasks.Database(":memory:")
+  db        = dbtasks.Database(":memory:")
   db.sort   = dbtasks.SORT.SequenceDESC
   db.show   = dbtasks.SHOW.AllTasks
   db.filter = nil
@@ -286,7 +292,7 @@ function win.MM_FILE.children.MenuFileOpen:onClick()
     win.WM_DATA.children.ButtonFilter.text = "(   )"
 
     local linkedFile = db:selectfile()
-    win.WM_ENTRY.children.LinkFile.text = (#linkedFile.name ~= 0) and  linkedFile.name or win.LM:translate("FileUnknown")
+    win.WM_ENTRY.children.LinkFile.text = (#linkedFile.name ~= 0) and linkedFile.name or win.LM:translate("FileUnknown")
     win.WM_ENTRY.children.LinkFile.link = linkedFile.path
 
     win:updatelist()
@@ -313,13 +319,13 @@ function win.MM_FILE.children.MenuFileSave:onClick()
       count  = db.count
     }
 
-    db = dbtasks.Database(saveFile.fullpath)
-    db.sort = saveProperties.sort
-    db.show  = saveProperties.show
-    db.filter = saveProperties.filter
-    db.page = saveProperties.page
-    db.pages = saveProperties.pages
-    db.count = saveProperties.count
+    db                   = dbtasks.Database(saveFile.fullpath)
+    db.sort              = saveProperties.sort
+    db.show              = saveProperties.show
+    db.filter            = saveProperties.filter
+    db.page              = saveProperties.page
+    db.pages             = saveProperties.pages
+    db.count             = saveProperties.count
 
     win:updatetitle()
 
@@ -470,7 +476,7 @@ end
 
 --#endregion
 
---#region panel events -- OK OK
+--#region panel events
 
 function win.WM_DATA.children.PanelTasks:onCreate()
   super(self).onCreate(self)
@@ -530,7 +536,7 @@ end
 
 --#endregion
 
---#region window events -- OK
+--#region window events
 
 function win:onCreate()
   win:center()
@@ -540,17 +546,24 @@ function win:onCreate()
   win.GM_INPUT:apply()
   win.GM_TABLE:apply()
   win.GM_FOOTER:apply()
+
+  if liapplication.SETTINGS.file.exists then
+    win.CM.settings = json.load(liapplication.SETTINGS.file)
+  end
+
+  if win.CM.settings == nil or next(win.CM.settings) == nil then
+    win.CM.settings = liapplication.SETTINGS.default
+  end
+
+  win.CM:apply()
 end
 
 function win:onShow()
-  win.CM.settings = json.load("ectasks.json")
-  win.CM:apply()
-
   if win.CM:setting("MenuAppEnglish") == true then
     win.LM.dictionary = ditranslations.english
     win.LM.language = ditranslations.English_United_States
   end
-  
+
   if win.CM:setting("MenuAppGerman") == true then
     win.LM.dictionary = ditranslations.german
     win.LM.language = ditranslations.German_Germany
@@ -558,15 +571,20 @@ function win:onShow()
 
   win.LM:apply()
 
-  win.MM_SORT.children.MenuSortSequenceDESC.checked = true
-  win.MM_SHOW.children.MenuShowAllTasks.checked = true
-  win.WM_ENTRY.children.LinkFile.text = win.LM:translate("FileUnknown")
+  if db.file == ":memory:" then
+    win.WM_ENTRY.children.LinkFile.text = win.LM:translate("FileUnknown")
+  else
+    local linkedFile = db:selectfile()
+    win.WM_ENTRY.children.LinkFile.text = (#linkedFile.name ~= 0) and linkedFile.name or win.LM:translate("FileUnknown")
+    win.WM_ENTRY.children.LinkFile.link = linkedFile.path
+  end
+
   win.WM_DATA.children.ButtonFilter.text = "(   )"
- 
+
   win:updatelist()
   win:updatewidgets()
-  win:updatetitle()
   win:updatestatus()
+  win:updatetitle()
 
   win.WM_ENTRY:focus("EntryTask")
 end
@@ -578,7 +596,7 @@ end
 function win:onHide()
   win.CM:update("MenuAppEnglish", win.MM_APP.children.MenuAppEnglish.checked)
   win.CM:update("MenuAppGerman", win.MM_APP.children.MenuAppGerman.checked)
-  json.save("ectasks.json", win.CM.settings)
+  json.save(liapplication.SETTINGS.file, win.CM.settings)
 end
 
 function win:onClose()
@@ -598,16 +616,5 @@ function win:onClose()
 end
 
 --#endregion
-
-if arg[1] ~= nil then
-  db        = dbtasks.Database(arg[1])
-  db.sort   = dbtasks.SORT.SequenceDESC
-  db.show   = dbtasks.SHOW.AllTasks
-  db.filter = nil
-  db.page   = 0
-  db.pages  = 0
-  db.count  = 0
-end
-
 
 ui.run(win):wait()
