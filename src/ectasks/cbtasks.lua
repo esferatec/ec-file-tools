@@ -90,6 +90,13 @@ end
 
 --#endregion
 
+--#region entry events
+function win.WM_ENTRY.children.EntryTask:onSelect()
+  win.WM_ENTRY.children.ButtonAdd:onClick()
+end
+
+--#endregion
+
 --#region button events
 
 function win.WM_ENTRY.children.ButtonFile:onClick()
